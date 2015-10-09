@@ -19,7 +19,10 @@ Import stringutil
 
 Import brl.process
 Import brl.filestream
-Import brl.requesters
+
+#If MD5TOOL_NOTIFY
+	Import brl.requesters
+#End
 
 ' Functions:
 Function Main:Int()
@@ -42,21 +45,37 @@ Function Main:Int()
 		Endif
 	#End
 	
+	Local Hash:MD5Hash
+	Local BeginTime:Int, TimeTaken:Int
+	
 	Local F:= FileStream.Open(Args[1], "r")
 	
 	If (F = Null) Then
-		Return ERROR_CODE
+		Print("Unable to load file, hashing input...")
+		
+		BeginTime = Millisecs()
+		
+		Hash = MD5(Args[1])
+		
+		TimeTaken = (Millisecs()-BeginTime)
+		
+		'Return ERROR_CODE
+	Else
+		BeginTime = Millisecs()
+		
+		Hash = MD5(F)
+		
+		TimeTaken = (Millisecs()-BeginTime)
+		
+		F.Close()
 	Endif
 	
-	Local Hash:= MD5(F)
-	
-	F.Close()
-	
-	Print(Hash)
+	Print("0x" + Hash)
+	Print("That took " + TimeTaken + "ms.")
 	
 	#If MD5TOOL_NOTIFY
 		If (ShouldNotify) Then
-			Notify("MD5: ~q" + Args[1] + "~q", Hash, False)
+			Notify("MD5: ~q" + Args[1] + "~q", "0x" + Hash + " (" + TimeTaken + "ms)", False)
 		Endif
 	#End
 	
