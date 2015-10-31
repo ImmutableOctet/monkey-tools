@@ -1,7 +1,7 @@
 #Rem
 	ATTENTION:
 		* This tool requires use of the GLFW target by default.
-		To build with STDCPP / C++ Tool, disable 'MD5TOOL_NOTIFY'.
+		To build with STDCPP / C++ Tool, disable 'SHA1TOOL_NOTIFY'.
 #End
 
 Strict
@@ -9,8 +9,10 @@ Strict
 Public
 
 ' Preprocessor related:
+#HASH_EXPERIMENTAL = True
+
 #If TARGET <> "stdcpp"
-	#MD5TOOL_NOTIFY = True
+	#SHA1TOOL_NOTIFY = True
 #End
 
 ' Imports:
@@ -21,7 +23,7 @@ Import regal.stringutil
 Import brl.process
 Import brl.filestream
 
-#If MD5TOOL_NOTIFY
+#If SHA1TOOL_NOTIFY
 	Import brl.requesters
 #End
 
@@ -38,7 +40,7 @@ Function Main:Int()
 		Return ERROR_CODE
 	Endif
 	
-	#If MD5TOOL_NOTIFY
+	#If SHA1TOOL_NOTIFY
 		Local ShouldNotify:Bool = True
 		
 		If (Args_Length > 2) Then
@@ -46,25 +48,19 @@ Function Main:Int()
 		Endif
 	#End
 	
-	Local Hash:MD5Hash
+	Local Hash:SHA1Hash
 	Local BeginTime:Int, TimeTaken:Int
 	
 	Local F:= FileStream.Open(Args[1], "r")
 	
 	If (F = Null) Then
-		Print("Unable to load file, hashing input...")
+		Print("Unable to load file.")
 		
-		BeginTime = Millisecs()
-		
-		Hash = MD5(Args[1])
-		
-		TimeTaken = (Millisecs()-BeginTime)
-		
-		'Return ERROR_CODE
+		Return ERROR_CODE
 	Else
 		BeginTime = Millisecs()
 		
-		Hash = MD5(F)
+		Hash = SHA1(F)
 		
 		TimeTaken = (Millisecs()-BeginTime)
 		
@@ -74,9 +70,9 @@ Function Main:Int()
 	Print("0x" + Hash)
 	Print("That took " + TimeTaken + "ms.")
 	
-	#If MD5TOOL_NOTIFY
+	#If SHA1TOOL_NOTIFY
 		If (ShouldNotify) Then
-			Notify("MD5: ~q" + Args[1] + "~q", "0x" + Hash + " (" + TimeTaken + "ms)", False)
+			Notify("SHA1: ~q" + Args[1] + "~q", "0x" + Hash + " (" + TimeTaken + "ms)", False)
 		Endif
 	#End
 	

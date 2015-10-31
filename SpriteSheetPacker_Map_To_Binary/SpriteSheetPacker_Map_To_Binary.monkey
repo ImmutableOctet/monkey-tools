@@ -14,11 +14,11 @@ Strict
 Public
 
 ' Imports:
-Import stringutil
-Import autostream
-Import ioelement
+Import regal.stringutil
+Import regal.autostream
+Import regal.ioelement
 
-'Import argumentloader
+'Import regal.argumentloader
 
 Import brl.process
 Import brl.filepath

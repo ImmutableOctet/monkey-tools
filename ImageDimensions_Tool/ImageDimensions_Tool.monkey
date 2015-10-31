@@ -3,8 +3,8 @@ Strict
 Public
 
 ' Imports:
-Import imagedimensions
-'Import ioutil
+Import regal.imagedimensions
+'Import regal.ioutil
 
 Import brl.process
 
