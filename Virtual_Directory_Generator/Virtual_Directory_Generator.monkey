@@ -20,6 +20,7 @@ Alias FileTime_t = Int
 Const RCODE_NORMAL:= 0
 Const RCODE_ERROR:= 1
 
+Const FILETIME_UNAVAILABLE:= 0
 Const FILE_EXTENSION:= "dir"
 
 ' Functions:
@@ -30,6 +31,8 @@ Function Main:Int()
 	Local InPath:String, OutPath:String
 	
 	#If Not VIRTUAL_DIR_GEN_SMART
+		Print("Loading arguments...")
+		
 		If (Arguments_Length < 3) Then
 			Print("Invalid number of arguments.")
 			
@@ -39,6 +42,8 @@ Function Main:Int()
 		InPath = Arguments[1]
 		OutPath = Arguments[2]
 	#Else
+		Print("Parsing argument data...")
+		
 		If (Arguments_Length < 2) Then
 			InPath = CurrentDir()
 		Else
@@ -52,18 +57,41 @@ Function Main:Int()
 		Endif
 	#End
 	
+	Print("Building file-system...")
+	
 	Try
-		MapFileSystem(InPath, OutPath)
-	Catch E:StreamError
-		Print("Failed to create ~qvirtual directory~q: " + E)
+		Local Master:= MapFileSystem(InPath)
+		
+		If (Master = Null) Then
+			Print("Unable to establish file-system.")
+			
+			Return RCODE_ERROR
+		Endif
+		
+		Print("Serializing file system...")
+		
+		Local F:= FileStream.Open(OutPath, "w")
+	
+		WriteFileSystem(F, Master)
+		
+		F.Close()
+	Catch E:StreamError ' Throwable
+		Print("Failed to create ~qvirtual directory~q:")
+		Print("")
+		Print("Exception: ~q" + E + "~q")
+		Print("Input: ~q" + InPath + "~q")
+		Print("Output: ~q" + OutPath + "~q")
 		
 		Return RCODE_ERROR
 	End
 	
+	Print("\\ Virtual file-system built. //")
+	
+	' Return the default response.
 	Return RCODE_NORMAL
 End
 
-Function MapFileSystem:Void(InPath:String, OutPath:String)
+Function MapFileSystem:Folder(InPath:String)
 	Local Master:= New Folder(StripDir(InPath))
 	
 	For Local Entry:= Eachin LoadDir(InPath, True)
@@ -79,13 +107,7 @@ Function MapFileSystem:Void(InPath:String, OutPath:String)
 		End Select
 	Next
 	
-	Local F:= FileStream.Open(OutPath, "w")
-	
-	WriteFileSystem(F, Master)
-	
-	F.Close()
-	
-	Return
+	Return Master
 End
 
 Function WriteFileSystem:Void(S:Stream, F:Folder, Offset:Int=1)
@@ -135,13 +157,16 @@ End
 
 Function WriteFileEntry:Void(S:Stream, F:File, FinishLine:Bool=False)
 	S.WriteString(F.Name)
-	S.WriteString("[")
-	S.WriteString(String(F.Time))
 	
-	If (Not FinishLine) Then
-		S.WriteString("]")
-	Else
-		S.WriteLine("]")
+	If (F.Time <> FILETIME_UNAVAILABLE) Then
+		S.WriteString("[")
+		S.WriteString(String(F.Time))
+		
+		If (Not FinishLine) Then
+			S.WriteString("]")
+		Else
+			S.WriteLine("]")
+		Endif
 	Endif
 	
 	Return
@@ -180,14 +205,14 @@ End
 ' Classes:
 Class File
 	' Constructor(s):
-	Method New(Name:String, Time:FileTime_t)
+	Method New(Name:String, Time:FileTime_t=FILETIME_UNAVAILABLE)
 		Self.Name = Name
 		Self.Time = Time
 	End
 	
 	' Fields:
 	Field Name:String
-	Field Time:FileTime_t
+	Field Time:FileTime_t = FILETIME_UNAVAILABLE
 End
 
 Class Folder
