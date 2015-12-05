@@ -6,6 +6,8 @@ Public
 #VIRTUAL_DIR_GEN_SMART = True
 
 ' Imports:
+Import regal.stringutil
+
 Import brl.stream
 Import brl.filestream
 
@@ -25,15 +27,18 @@ Const FILE_EXTENSION:= "dir"
 
 ' Functions:
 Function Main:Int()
+	Const ARGUMENT_COUNT:= 4 ' 3
+	
 	Local Arguments:= AppArgs() ' ["reserved", "data", "directory.txt"]
 	Local Arguments_Length:= Arguments.Length
 	
+	Local IncludeFiles:Bool = False ' True
 	Local InPath:String, OutPath:String
 	
 	#If Not VIRTUAL_DIR_GEN_SMART
 		Print("Loading arguments...")
 		
-		If (Arguments_Length < 3) Then
+		If (Arguments_Length < ARGUMENT_COUNT) Then
 			Print("Invalid number of arguments.")
 			
 			Return RCODE_ERROR
@@ -41,6 +46,7 @@ Function Main:Int()
 		
 		InPath = Arguments[1]
 		OutPath = Arguments[2]
+		IncludeFiles = StringToBool(Arguments[3])
 	#Else
 		Print("Parsing argument data...")
 		
@@ -55,12 +61,16 @@ Function Main:Int()
 		Else
 			OutPath = Arguments[2]
 		Endif
+		
+		If (Arguments_Length > 3) Then
+			IncludeFiles = StringToBool(Arguments[3])
+		Endif
 	#End
 	
 	Print("Building file-system...")
 	
 	Try
-		Local Master:= MapFileSystem(InPath)
+		Local Master:= MapFileSystem(InPath, IncludeFiles)
 		
 		If (Master = Null) Then
 			Print("Unable to establish file-system.")
@@ -91,7 +101,7 @@ Function Main:Int()
 	Return RCODE_NORMAL
 End
 
-Function MapFileSystem:Folder(InPath:String)
+Function MapFileSystem:Folder(InPath:String, IncludeFiles:Bool=True)
 	Local Master:= New Folder(StripDir(InPath))
 	
 	For Local Entry:= Eachin LoadDir(InPath, True)
@@ -101,7 +111,9 @@ Function MapFileSystem:Folder(InPath:String)
 		
 		Select FileType(RealPath)
 			Case FILETYPE_FILE
-				Parent.Files.PushLast(New File(Name, FileTime(RealPath)))
+				If (IncludeFiles) Then
+					Parent.Files.PushLast(New File(Name, FileTime(RealPath)))
+				Endif
 			Case FILETYPE_DIR
 				Parent.SubFolders.PushLast(New Folder(Name))
 		End Select
