@@ -33,6 +33,7 @@ Function Main:Int()
 	Local Arguments_Length:= Arguments.Length
 	
 	Local IncludeFiles:Bool = False ' True
+	Local IncludeTimes:Bool = False
 	Local InPath:String, OutPath:String
 	
 	#If Not VIRTUAL_DIR_GEN_SMART
@@ -67,10 +68,14 @@ Function Main:Int()
 		Endif
 	#End
 	
+	If (Arguments_Length > 4) Then
+		IncludeTimes = StringToBool(Arguments[4])
+	Endif
+	
 	Print("Building file-system...")
 	
 	Try
-		Local Master:= MapFileSystem(InPath, IncludeFiles)
+		Local Master:= MapFileSystem(InPath, IncludeFiles, IncludeTimes)
 		
 		If (Master = Null) Then
 			Print("Unable to establish file-system.")
@@ -101,7 +106,7 @@ Function Main:Int()
 	Return RCODE_NORMAL
 End
 
-Function MapFileSystem:Folder(InPath:String, IncludeFiles:Bool=True)
+Function MapFileSystem:Folder(InPath:String, IncludeFiles:Bool=True, IncludeTimes:Bool=False)
 	Local Master:= New Folder(StripDir(InPath))
 	
 	For Local Entry:= Eachin LoadDir(InPath, True)
@@ -112,7 +117,13 @@ Function MapFileSystem:Folder(InPath:String, IncludeFiles:Bool=True)
 		Select FileType(RealPath)
 			Case FILETYPE_FILE
 				If (IncludeFiles) Then
-					Parent.Files.PushLast(New File(Name, FileTime(RealPath)))
+					Local FTime:= FILETIME_UNAVAILABLE
+					
+					If (IncludeTimes) Then
+						FTime = FileTime(RealPath)
+					Endif
+					
+					Parent.Files.PushLast(New File(Name, FTime))
 				Endif
 			Case FILETYPE_DIR
 				Parent.SubFolders.PushLast(New Folder(Name))
