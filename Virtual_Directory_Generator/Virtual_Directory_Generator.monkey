@@ -15,6 +15,9 @@ Import brl.filesystem
 Import brl.filepath
 Import brl.process
 
+' Testing related:
+Import brl.databuffer
+
 ' Aliases:
 Alias FileTime_t = Int
 
@@ -34,6 +37,8 @@ Function Main:Int()
 	
 	Local IncludeFiles:Bool = False ' True
 	Local IncludeTimes:Bool = False
+	Local IncludeBuildDirs:Bool = False
+	
 	Local InPath:String, OutPath:String
 	
 	#If Not VIRTUAL_DIR_GEN_SMART
@@ -70,12 +75,16 @@ Function Main:Int()
 	
 	If (Arguments_Length > 4) Then
 		IncludeTimes = StringToBool(Arguments[4])
+		
+		If (Arguments_Length > 5) Then
+			IncludeBuildDirs = StringToBool(Arguments[5])
+		Endif
 	Endif
 	
 	Print("Building file-system...")
 	
 	Try
-		Local Master:= MapFileSystem(InPath, IncludeFiles, IncludeTimes)
+		Local Master:= MapFileSystem(InPath, IncludeFiles, IncludeTimes, IncludeBuildDirs)
 		
 		If (Master = Null) Then
 			Print("Unable to establish file-system.")
@@ -106,10 +115,15 @@ Function Main:Int()
 	Return RCODE_NORMAL
 End
 
-Function MapFileSystem:Folder(InPath:String, IncludeFiles:Bool=True, IncludeTimes:Bool=False)
-	Local Master:= New Folder(StripDir(InPath))
+Function MapFileSystem:Folder(InPath:String, IncludeFiles:Bool=True, IncludeTimes:Bool=False, IncludeBuildDirs:Bool=False)
+	Return MapFileSystem(InPath, StripDir(InPath), IncludeFiles, IncludeTimes, IncludeBuildDirs)
+End
+
+Function MapFileSystem:Folder(InPath:String, MasterFolderName:String, IncludeFiles:Bool=True, IncludeTimes:Bool=False, IncludeBuildDirs:Bool=False)
+	Local Master:= New Folder(MasterFolderName)
+	Local FileSystemEntries:= LoadDir(InPath, False)
 	
-	For Local Entry:= Eachin LoadDir(InPath, True)
+	For Local Entry:= Eachin FileSystemEntries
 		Local RealPath:= (InPath + "/" + Entry)
 		Local Parent:= GetFolderFromPath(Master, RealPath)
 		Local Name:= StripDir(Entry)
@@ -126,7 +140,15 @@ Function MapFileSystem:Folder(InPath:String, IncludeFiles:Bool=True, IncludeTime
 					Parent.Files.PushLast(New File(Name, FTime))
 				Endif
 			Case FILETYPE_DIR
-				Parent.SubFolders.PushLast(New Folder(Name))
+				If (Not IncludeBuildDirs) Then
+					Local SuffixLocation:= Name.FindLast("build")
+					
+					If (SuffixLocation = (Name.FindLast(".") + 1)) Then
+						Continue
+					Endif
+				Endif
+				
+				Parent.SubFolders.PushLast(MapFileSystem(RealPath, Name, IncludeFiles, IncludeTimes, IncludeBuildDirs))
 		End Select
 	Next
 	
