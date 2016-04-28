@@ -16,32 +16,42 @@ Function Main:Int()
 	Local Recursive:Bool = False ' True
 	
 	Local TargetPath:String
+	Local FileSuffix:String
 	
 	If (Arguments.Length >= 2) Then
 		TargetPath = Arguments[1]
 		
 		If (Arguments.Length >= 3) Then
-			Recursive = Bool(Int(Arguments[2]))
+			FileSuffix = Arguments[2]
+			
+			If (Arguments.Length >= 4) Then
+				Recursive = Bool(Int(Arguments[3]))
+			Endif
 		Endif
 	Endif
 	
 	ChangeDir(TargetPath)
 	
 	Local TotalLines:Int = 0
+	Local EntriesLoaded:Int = 0
 	
 	For Local Path:= Eachin LoadDir(TargetPath, Recursive)
-		Local S:= FileStream.Open(Path, "r")
-		
-		If (S <> Null And Not S.Eof()) Then ' Eof
-			Local Content:= S.ReadString()
+		If (Path.EndsWith(FileSuffix)) Then
+			Local S:= FileStream.Open(Path, "r")
 			
-			S.Close()
-			
-			Local LineCount:= CountLines(Content)
-			
-			Print("~q" + Path + "~q : " + LineCount)
-			
-			TotalLines += LineCount
+			If (S <> Null And Not S.Eof()) Then ' Eof
+				Local Content:= S.ReadString()
+				
+				S.Close()
+				
+				Local LineCount:= CountLines(Content)
+				
+				EntriesLoaded += 1
+				
+				Print("[" + EntriesLoaded + "] ~q" + Path + "~q : " + LineCount)
+				
+				TotalLines += LineCount
+			Endif
 		Endif
 	Next
 	
